@@ -110,25 +110,22 @@
     checkScrollPosition();
   }
 
-  let lastScrollY = window.scrollY;
-  let scrollAccumulator = 0;
-  const scrollThreshold = 10; // Pixels to scroll before changing frame. Adjust for sensitivity.
+  // Removed lastScrollY, scrollAccumulator, and scrollThreshold
 
   window.addEventListener('wheel', (event) => {
     if (!animator || totalFrames === 0) return;
 
     event.preventDefault(); // Prevent page scrolling while controlling GIF
 
-    scrollAccumulator += event.deltaY;
-
     let framesToAdvance = 0;
 
-    if (scrollAccumulator > scrollThreshold) {
+    // Determine direction of scroll
+    // Small deltaY values (e.g., from precision touchpads) should still register a change.
+    // Larger deltaY values (e.g., from mice with distinct scroll wheel clicks) will also register.
+    if (event.deltaY > 0) {
       framesToAdvance = 1; // Scroll down, next frame
-      scrollAccumulator = 0;
-    } else if (scrollAccumulator < -scrollThreshold) {
+    } else if (event.deltaY < 0) {
       framesToAdvance = -1; // Scroll up, previous frame
-      scrollAccumulator = 0;
     }
 
     if (framesToAdvance !== 0) {
