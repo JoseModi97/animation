@@ -33,36 +33,47 @@ window.addEventListener('load', () => {
         // For now, we'll draw the first frame once everything is ready.
         // The `animate()` method would typically start playing all frames.
         // We want manual control.
-    }).then(renderer => {
-        // This .then() is called after all frames are processed by .frames()
+        // The third argument to .frames() is the onDone callback.
+    }, renderer => { // This is the onDone callback
         player = renderer; // Ensure player is the fully initialized renderer
         frames = player.frames;
 
-        if (frames.length > 0) {
-            // 1. Set canvas dimensions (already done if first frame was processed by .frames())
-            if (canvas.width !== gifWidth || canvas.height !== gifHeight) {
-                gifWidth = player.width || frames[0].width;
-                gifHeight = player.height || frames[0].height;
-                canvas.width = gifWidth;
-                canvas.height = gifHeight;
+        if (frames && frames.length > 0) {
+            // 1. Set canvas dimensions (already done if first frame was processed by .frames() callback)
+            // Ensure dimensions are correctly set using the fully loaded player
+            if (!gifWidth || !gifHeight || canvas.width !== gifWidth || canvas.height !== gifHeight) {
+                gifWidth = player.width || (frames[0] && frames[0].width);
+                gifHeight = player.height || (frames[0] && frames[0].height);
+                if (gifWidth && gifHeight) {
+                    canvas.width = gifWidth;
+                    canvas.height = gifHeight;
+                } else {
+                    console.error("Could not determine GIF dimensions.");
+                    // Fallback canvas size if GIF dimensions are still unknown
+                    canvas.width = canvas.width || 300;
+                    canvas.height = canvas.height || 150;
+                }
             }
 
             // 2. Draw the first frame
-            player.renderFrame(0, ctx, 0, 0);
+            // Ensure ctx is valid and player is ready
+            if (ctx && player) {
+                player.renderFrame(0, ctx, 0, 0);
+            }
 
             // 3. Set body height for scrolling
-            // Let's assume each frame corresponds to a certain number of scroll pixels
             const scrollPixelsPerFrame = 20; // Adjust for desired scroll sensitivity
             document.body.style.height = (frames.length * scrollPixelsPerFrame) + 'px';
 
             // 4. Add scroll event listener
             window.addEventListener('scroll', handleScroll, { passive: true });
         } else {
-            console.error("GIF could not be loaded or contains no frames.");
+            console.error("GIF could not be loaded or contains no frames (onDone).");
         }
-    }).catch(err => {
-        console.error("Error loading or processing GIF:", err);
     });
+    // Removed .catch() as .frames() doesn't return a promise. Error handling might need to be re-evaluated.
+    // Gifler itself doesn't seem to have explicit global error handling for issues like XHR failures.
+    // The browser console would show network errors for the GIF loading part.
 
     function handleScroll() {
         if (!player || frames.length === 0) return;
