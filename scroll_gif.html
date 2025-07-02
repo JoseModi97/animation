@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Scrollable GIF</title>
+<style>
+  body {
+    min-height: 200vh; /* Ensure there's enough space to scroll */
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align canvas to the top */
+    background-color: #f0f0f0;
+  }
+  canvas {
+    border: 1px solid black;
+    margin-top: 20px;
+  }
+  #scrollInfo {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(255,255,255,0.8);
+    padding: 5px;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gifCanvas"></canvas>
+<div id="scrollInfo">Scroll to control GIF</div>
+
+<script src="gifler.bundle.js"></script>
+<script>
+  const canvas = document.getElementById('gifCanvas');
+  const ctx = canvas.getContext('2d');
+  const scrollInfo = document.getElementById('scrollInfo');
+  let animator = null;
+  let frames = [];
+  let totalFrames = 0;
+  let currentFrameIndex = 0;
+  let gifWidth = 0;
+  let gifHeight = 0;
+
+  // Use a common GIF from the repo for testing
+  const gifUrl = 'gh-pages/assets/gif/run.gif';
+
+  gifler(gifUrl).get().then(async (instance) => {
+    animator = instance;
+    frames = animator._frames; // Access internal frames array
+    totalFrames = frames.length;
+    gifWidth = animator.width;
+    gifHeight = animator.height;
+
+    // Set canvas dimensions
+    canvas.width = gifWidth;
+    canvas.height = gifHeight;
+
+    // Prepare all frames by creating their buffer canvases
+    // This prevents lag during scrolling
+    for (let i = 0; i < totalFrames; i++) {
+      const frame = frames[i];
+      if (!frame.buffer) { // Lazily create buffer if not already there
+          frame.buffer = gifler.Animator.createBufferCanvas(frame, gifWidth, gifHeight);
+      }
+    }
+
+    console.log(`GIF loaded: ${totalFrames} frames, ${gifWidth}x${gifHeight}`);
+    renderFrame(currentFrameIndex); // Render initial frame
+
+    // Initial scroll position check
+    checkScrollPosition();
+  }).catch(err => {
+    console.error("Error loading GIF:", err);
+    scrollInfo.textContent = "Error loading GIF.";
+  });
+
+  function renderFrame(frameIndex) {
+    if (!animator || !frames || frames.length === 0) return;
+
+    currentFrameIndex = Math.max(0, Math.min(frameIndex, totalFrames - 1));
+    const frame = frames[currentFrameIndex];
+
+    if (!frame) {
+      console.error("Frame not found at index:", currentFrameIndex);
+      return;
+    }
+
+    // Ensure buffer is created (it should be by the initial loop, but as a fallback)
+    if (!frame.buffer) {
+        frame.buffer = gifler.Animator.createBufferCanvas(frame, gifWidth, gifHeight);
+    }
+
+    // Handle frame disposal - simplified for this use case
+    // More complex disposal logic might be needed for some GIFs
+    // For now, we clear the canvas before drawing the new frame if disposal is 2
+    // or rely on the frame overwriting previous content.
+    if (frame.disposal === 2) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    // Disposal 3 (restore previous) is harder to manage without full animation loop state.
+    // For scrolling, redrawing the current frame is often sufficient.
+
+    ctx.drawImage(frame.buffer, frame.x, frame.y);
+    scrollInfo.textContent = `Frame: ${currentFrameIndex + 1} / ${totalFrames}`;
+
+    checkScrollPosition();
+  }
+
+  let lastScrollY = window.scrollY;
+  let scrollAccumulator = 0;
+  const scrollThreshold = 10; // Pixels to scroll before changing frame. Adjust for sensitivity.
+
+  window.addEventListener('wheel', (event) => {
+    if (!animator || totalFrames === 0) return;
+
+    event.preventDefault(); // Prevent page scrolling while controlling GIF
+
+    scrollAccumulator += event.deltaY;
+
+    let framesToAdvance = 0;
+
+    if (scrollAccumulator > scrollThreshold) {
+      framesToAdvance = 1; // Scroll down, next frame
+      scrollAccumulator = 0;
+    } else if (scrollAccumulator < -scrollThreshold) {
+      framesToAdvance = -1; // Scroll up, previous frame
+      scrollAccumulator = 0;
+    }
+
+    if (framesToAdvance !== 0) {
+      let newFrameIndex = currentFrameIndex + framesToAdvance;
+      renderFrame(newFrameIndex);
+    }
+  }, { passive: false }); // passive: false to allow preventDefault
+
+  function checkScrollPosition() {
+    if (currentFrameIndex === totalFrames - 1 && totalFrames > 0) {
+      // Scroll to bottom if on the last frame
+      // Add a small delay to ensure rendering completes before scrolling
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
+    }
+  }
+
+  // Make body high enough to demonstrate scrolling to bottom
+  document.body.style.height = '300vh';
+
+</script>
+
+</body>
+</html>
