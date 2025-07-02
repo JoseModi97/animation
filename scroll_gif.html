@@ -4,16 +4,19 @@
 <title>Scrollable GIF</title>
 <style>
   body {
-    min-height: 200vh; /* Ensure there's enough space to scroll */
+    min-height: 300vh; /* Ensure there's enough space to scroll page content */
     margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Align canvas to the top */
+    padding-top: calc(50vh); /* Add padding to push content down, so fixed GIF doesn't overlap initially */
     background-color: #f0f0f0;
+    /* display: flex and justify-content removed as fixed positioning handles placement */
   }
-  canvas {
+  canvas#gifCanvas { /* More specific selector */
     border: 1px solid black;
-    margin-top: 20px;
+    position: fixed;
+    top: 20px; /* Adjust as desired */
+    left: 50%;
+    transform: translateX(-50%); /* Center the canvas */
+    z-index: 1000; /* Ensure it's above other content */
   }
   #scrollInfo {
     position: fixed;
