@@ -130,11 +130,25 @@
 
     if (framesToAdvance !== 0) {
       let newFrameIndex = currentFrameIndex + framesToAdvance;
+
+      // Implement looping
+      if (newFrameIndex >= totalFrames) {
+        newFrameIndex = 0; // Loop to the beginning
+      } else if (newFrameIndex < 0) {
+        newFrameIndex = totalFrames - 1; // Loop to the end
+      }
+
       renderFrame(newFrameIndex);
     }
   }, { passive: false }); // passive: false to allow preventDefault
 
   function checkScrollPosition() {
+    // This function is called within renderFrame.
+    // We want to scroll to bottom only when the *natural* last frame is reached by scrolling forward.
+    // The currentFrameIndex in renderFrame is already updated before this is called.
+    // We need to know the direction of advancement to avoid scrolling to bottom when looping from start to end backwards.
+    // However, a simpler approach for now: trigger if currentFrameIndex is the last frame,
+    // regardless of how it was reached. The user might want to adjust this behavior later.
     if (currentFrameIndex === totalFrames - 1 && totalFrames > 0) {
       // Scroll to bottom if on the last frame
       // Add a small delay to ensure rendering completes before scrolling
